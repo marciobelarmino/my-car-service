@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -18,12 +19,12 @@ func (s *StubCarStore) GetAll() []Car {
 
 func TestCar(t *testing.T) {
 	t.Run("it returns the list of cars", func(t *testing.T) {
-		wantedCars := []Car{
+		want := []Car{
 			{"Ford", "F10", "Base", "Silver", 2010, "Truck", 120123, 1999900, "JHk290Xj"},
 			{"Toyota", "Camry", "SE", "White", 2019, "Sedan", 3999, 2899000, "fWl37la"},
 		}
 
-		store := StubCarStore{wantedCars}
+		store := StubCarStore{want}
 		server := NewCarServer(&store)
 
 		request, _ := http.NewRequest(http.MethodGet, "/cars", nil)
@@ -31,23 +32,37 @@ func TestCar(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 
-		var cars []Car
-
-		err := json.NewDecoder(response.Body).Decode(&cars)
-		if err != nil {
-			t.Fatalf("Unable to parse response from server %q into slice of Car, '%v'", response.Body, err)
-		}
+		got := getCarsFromResponse(t, response.Body)
 
 		assertStatus(t, response.Code, http.StatusOK)
-
-		if !reflect.DeepEqual(cars, wantedCars) {
-			t.Errorf("got %v want %v", cars, wantedCars)
-		}
-
-		if response.Result().Header.Get("content-type") != jsonContentType {
-			t.Errorf("response did not have content-type of %s, got %v", jsonContentType, response.Result().Header)
-		}
+		assertCars(t, got, want)
+		assertContentType(t, response, jsonContentType)
 	})
+}
+
+func assertContentType(t testing.TB, response *httptest.ResponseRecorder, want string) {
+	t.Helper()
+	if response.Result().Header.Get("content-type") != want {
+		t.Errorf("response did not have content-type of %s, got %v", want, response.Result().Header)
+	}
+}
+
+func getCarsFromResponse(t testing.TB, body io.Reader) (cars []Car) {
+	t.Helper()
+	err := json.NewDecoder(body).Decode(&cars)
+
+	if err != nil {
+		t.Fatalf("Unable to parse response from server %q into slice of Car, '%v'", body, err)
+	}
+
+	return
+}
+
+func assertCars(t testing.TB, got, want []Car) {
+	t.Helper()
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("got %v want %v", got, want)
+	}
 }
 
 func assertStatus(t testing.TB, got, want int) {
