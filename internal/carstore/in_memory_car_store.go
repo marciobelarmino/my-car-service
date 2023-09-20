@@ -1,11 +1,8 @@
-package main
+package carstore
 
 import (
-	"errors"
+	"github.com/marciobelarmino/my-car-service/errors"
 )
-
-var ErrCarCreationMessage = errors.New("unable to create a car without id")
-var ErrCarUpdatingMessage = errors.New("unable to update a car without id")
 
 // InMemoryCarStore collects data about cars in memory.
 type InMemoryCarStore struct {
@@ -35,7 +32,7 @@ func (i *InMemoryCarStore) Get(id string) Car {
 func (i *InMemoryCarStore) Create(car Car) (Car, error) {
 
 	if car.Id == "" {
-		return Car{}, ErrCarCreationMessage
+		return Car{}, errors.ErrCarCreationMessage
 	}
 
 	i.store[car.Id] = car
@@ -48,11 +45,46 @@ func (i *InMemoryCarStore) Update(id string, car Car) (Car, error) {
 
 	// car not exists
 	if carToUpdate.Id == "" {
-		return Car{}, ErrCarUpdatingMessage
+		return Car{}, errors.ErrCarUpdatingMessage
 	}
 
-	updateCarFromTo(&car, &carToUpdate)
+	UpdateCarFromTo(&car, &carToUpdate)
 
 	i.store[id] = carToUpdate
 	return i.store[id], nil
+}
+
+func UpdateCarFromTo(from *Car, to *Car) {
+	if from.Make != "" {
+		to.Make = from.Make
+	}
+
+	if from.Model != "" {
+		to.Model = from.Model
+	}
+
+	if from.Year != 0 {
+		to.Year = from.Year
+	}
+
+	if from.Color != "" {
+		to.Color = from.Color
+	}
+
+	if from.Category != "" {
+		to.Category = from.Category
+	}
+
+	if from.Package != "" {
+		to.Package = from.Package
+	}
+
+	if from.Mileage != 0 {
+		to.Mileage = from.Mileage
+	}
+
+	if from.Price != 0 {
+		to.Price = from.Price
+	}
+
 }

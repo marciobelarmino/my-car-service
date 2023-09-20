@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bytes"
@@ -10,48 +10,51 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/marciobelarmino/my-car-service/errors"
+	"github.com/marciobelarmino/my-car-service/internal/carstore"
 )
 
 // CarsInitialData stores the initial data for InMemoryCarStore
-var CarsInitialData map[string]Car = map[string]Car{
-	"JHk290Xj": {"Ford", "F10", "Base", "Silver", 2010, "Truck", 120123, 1999900, "JHk290Xj"},
-	"fWl37la":  {"Toyota", "Camry", "SE", "White", 2019, "Sedan", 3999, 2899000, "fWl37la"},
+var CarsInitialData map[string]carstore.Car = map[string]carstore.Car{
+	"JHk290Xj": {Make: "Ford", Model: "F10", Package: "Base", Color: "Silver", Year: 2010, Category: "Truck", Mileage: 120123, Price: 1999900, Id: "JHk290Xj"},
+	"fWl37la":  {Make: "Toyota", Model: "Camry", Package: "SE", Color: "White", Year: 2019, Category: "Sedan", Mileage: 3999, Price: 2899000, Id: "fWl37la"},
 }
 
 type StubCarStore struct {
-	store map[string]Car
+	store map[string]carstore.Car
 }
 
-func (s *StubCarStore) GetAll() []Car {
-	var cars []Car
+func (s *StubCarStore) GetAll() []carstore.Car {
+	var cars []carstore.Car
 	for _, car := range s.store {
 		cars = append(cars, car)
 	}
 	return cars
 }
 
-func (s *StubCarStore) Get(id string) Car {
+func (s *StubCarStore) Get(id string) carstore.Car {
 	return s.store[id]
 }
 
-func (s *StubCarStore) Create(car Car) (Car, error) {
+func (s *StubCarStore) Create(car carstore.Car) (carstore.Car, error) {
 	if car.Id == "" {
-		return Car{}, ErrCarCreationMessage
+		return carstore.Car{}, errors.ErrCarCreationMessage
 	}
 
 	s.store[car.Id] = car
 	return s.store[car.Id], nil
 }
 
-func (s *StubCarStore) Update(id string, car Car) (Car, error) {
+func (s *StubCarStore) Update(id string, car carstore.Car) (carstore.Car, error) {
 	carToUpdate := s.Get(id)
 
 	// car not exists
 	if carToUpdate.Id == "" {
-		return Car{}, ErrCarUpdatingMessage
+		return carstore.Car{}, errors.ErrCarUpdatingMessage
 	}
 
-	updateCarFromTo(&car, &carToUpdate)
+	carstore.UpdateCarFromTo(&car, &carToUpdate)
 
 	s.store[id] = carToUpdate
 	return s.store[id], nil
@@ -87,13 +90,13 @@ func TestGETCars(t *testing.T) {
 
 		assertStatus(t, response.Code, http.StatusOK)
 		assertCar(t, got, want)
-		assertContentType(t, response, jsonContentType)
+		assertContentType(t, response, JsonContentType)
 	})
 
 	t.Run("it retrieve the list of cars", func(t *testing.T) {
-		want := []Car{
-			{"Ford", "F10", "Base", "Silver", 2010, "Truck", 120123, 1999900, "JHk290Xj"},
-			{"Toyota", "Camry", "SE", "White", 2019, "Sedan", 3999, 2899000, "fWl37la"},
+		want := []carstore.Car{
+			{Make: "Ford", Model: "F10", Package: "Base", Color: "Silver", Year: 2010, Category: "Truck", Mileage: 120123, Price: 1999900, Id: "JHk290Xj"},
+			{Make: "Toyota", Model: "Camry", Package: "SE", Color: "White", Year: 2019, Category: "Sedan", Mileage: 3999, Price: 2899000, Id: "fWl37la"},
 		}
 
 		store := StubCarStore{CarsInitialData}
@@ -108,18 +111,18 @@ func TestGETCars(t *testing.T) {
 
 		assertStatus(t, response.Code, http.StatusOK)
 		assertCars(t, got, want)
-		assertContentType(t, response, jsonContentType)
+		assertContentType(t, response, JsonContentType)
 	})
 }
 
 func TestPOSTCars(t *testing.T) {
 
-	store := StubCarStore{map[string]Car{}}
+	store := StubCarStore{map[string]carstore.Car{}}
 	server := NewCarServer(&store)
 
 	t.Run("it creates a new car when POST", func(t *testing.T) {
 
-		want := Car{
+		want := carstore.Car{
 			Id:    "Xyz123",
 			Make:  "Toyota",
 			Model: "Camry",
@@ -141,7 +144,7 @@ func TestPOSTCars(t *testing.T) {
 
 		assertStatus(t, response.Code, http.StatusCreated)
 		assertCar(t, got, want)
-		assertContentType(t, response, jsonContentType)
+		assertContentType(t, response, JsonContentType)
 	})
 
 	t.Run("it returns a bad request when request data is malformed", func(t *testing.T) {
@@ -157,7 +160,7 @@ func TestPOSTCars(t *testing.T) {
 }
 
 func TestPUTCars(t *testing.T) {
-	existingCar := map[string]Car{
+	existingCar := map[string]carstore.Car{
 		"Xyz1234": {
 			Id:       "Xyz1234",
 			Make:     "Toyota",
@@ -175,7 +178,7 @@ func TestPUTCars(t *testing.T) {
 	server := NewCarServer(&store)
 
 	t.Run("it updates an existent car when PUT", func(t *testing.T) {
-		want := Car{
+		want := carstore.Car{
 			Id:       "Xyz1234",
 			Make:     "Toyota",
 			Model:    "Camry",
@@ -202,11 +205,11 @@ func TestPUTCars(t *testing.T) {
 
 		assertStatus(t, response.Code, http.StatusOK)
 		assertCar(t, got, want)
-		assertContentType(t, response, jsonContentType)
+		assertContentType(t, response, JsonContentType)
 	})
 }
 
-func getCarFromResponse(t testing.TB, body io.Reader) (car Car) {
+func getCarFromResponse(t testing.TB, body io.Reader) (car carstore.Car) {
 	t.Helper()
 	err := json.NewDecoder(body).Decode(&car)
 
@@ -224,7 +227,7 @@ func assertContentType(t testing.TB, response *httptest.ResponseRecorder, want s
 	}
 }
 
-func getCarsFromResponse(t testing.TB, body io.Reader) (cars []Car) {
+func getCarsFromResponse(t testing.TB, body io.Reader) (cars []carstore.Car) {
 	t.Helper()
 	err := json.NewDecoder(body).Decode(&cars)
 
@@ -235,14 +238,14 @@ func getCarsFromResponse(t testing.TB, body io.Reader) (cars []Car) {
 	return
 }
 
-func assertCar(t testing.TB, got, want Car) {
+func assertCar(t testing.TB, got, want carstore.Car) {
 	t.Helper()
 	if got != want {
 		t.Errorf("got %v want %v", got, want)
 	}
 }
 
-func assertCars(t testing.TB, got, want []Car) {
+func assertCars(t testing.TB, got, want []carstore.Car) {
 	t.Helper()
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("got %v want %v", got, want)
