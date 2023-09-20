@@ -115,6 +115,7 @@ func NewCarServer(store carstore.CarStore) *CarServer {
 	router.Handle("/cars/", http.HandlerFunc(c.carByIdHandler))
 
 	// Serve Swagger UI
+	router.Handle("/swagger.json", http.FileServer(http.Dir(".")))
 	router.Handle("/swagger-ui/", http.StripPrefix("/swagger-ui/", http.FileServer(http.Dir("./swagger-ui"))))
 
 	c.Handler = router

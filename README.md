@@ -11,7 +11,7 @@ The application hosts the following endpoints:
 3. **POST** endpoint to create a new car
 4. **PUT** endpoint to update an existing car by ID
 
-You can access the API documentation and interact with these endpoints using Swagger UI by visiting [http://localhost:8080/swagger-ui/#/default](http://localhost:8080/swagger-ui/#/default).
+You can access the API documentation and interact with these endpoints using Swagger UI by visiting [http://localhost:8585/swagger-ui/#/default](http://localhost:8585/swagger-ui/#/default).
 
 ## Prerequisites
 
@@ -37,23 +37,19 @@ Follow these steps to build, run, and test the microservice:
 3. **Create a new car**:
 
    ```bash
-   curl -X POST http://localhost:8080/cars -d '{"make": "Toyota", "model": "Camry", "package": "SE", "color": "White", "year": 2010, "category": "Sedan", "mileage": 3999, "price": 2899000, "id": "fWl37la"}'
+   curl -X POST http://localhost:8585/cars -d '{"make": "Toyota", "model": "Camry", "package": "SE", "color": "White", "year": 2010, "category": "Sedan", "mileage": 3999, "price": 2899000, "id": "fWl37la"}'
 
 4. **Get an existent car**:
 
    ```bash
-    curl -X GET http://localhost:8080/cars/fWl37la
+    curl -X GET http://localhost:8585/cars/fWl37la
 
 4. **Update an existent car**:
 
    ```bash
-    curl -X PUT http://localhost:8080/cars/fWl37la -d '{"make": "Toyota", "model": "Camry", "package": "SE", "color": "Gold", "year": 2015, "category": "Sedan", "mileage": 2000, "price": 3899000, "id": "fWl37la"}'
+    curl -X PUT http://localhost:8585/cars/fWl37la -d '{"make": "Toyota", "model": "Camry", "package": "SE", "color": "Gold", "year": 2015, "category": "Sedan", "mileage": 2000, "price": 3899000, "id": "fWl37la"}'
 
 4. **List all cars**:
 
    ```bash
-    curl -X GET http://localhost:8080/cars
-
-
-
-
+    curl -X GET http://localhost:8585/cars
