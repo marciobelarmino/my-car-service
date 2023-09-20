@@ -12,6 +12,12 @@ import (
 	"testing"
 )
 
+// CarsInitialData stores the initial data for InMemoryCarStore
+var CarsInitialData map[string]Car = map[string]Car{
+	"JHk290Xj": {"Ford", "F10", "Base", "Silver", 2010, "Truck", 120123, 1999900, "JHk290Xj"},
+	"fWl37la":  {"Toyota", "Camry", "SE", "White", 2019, "Sedan", 3999, 2899000, "fWl37la"},
+}
+
 type StubCarStore struct {
 	store map[string]Car
 }
@@ -45,14 +51,7 @@ func (s *StubCarStore) Update(id string, car Car) (Car, error) {
 		return Car{}, ErrCarUpdatingMessage
 	}
 
-	carToUpdate.Make = car.Make
-	carToUpdate.Model = car.Model
-	carToUpdate.Year = car.Year
-	carToUpdate.Color = car.Color
-	carToUpdate.Category = car.Category
-	carToUpdate.Package = car.Package
-	carToUpdate.Mileage = car.Mileage
-	carToUpdate.Price = car.Price
+	updateCarFromTo(&car, &carToUpdate)
 
 	s.store[id] = carToUpdate
 	return s.store[id], nil
@@ -176,12 +175,11 @@ func TestPUTCars(t *testing.T) {
 	server := NewCarServer(&store)
 
 	t.Run("it updates an existent car when PUT", func(t *testing.T) {
-		keyToUpdate := "Xyz1234"
 		want := Car{
 			Id:       "Xyz1234",
 			Make:     "Toyota",
 			Model:    "Camry",
-			Year:     2020,
+			Year:     2022,
 			Color:    "Gold",
 			Category: "Sedan",
 			Package:  "SE",
@@ -195,7 +193,7 @@ func TestPUTCars(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		request, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/cars/%s", keyToUpdate), &requestBody)
+		request, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/cars/%s", want.Id), &requestBody)
 		response := httptest.NewRecorder()
 
 		server.ServeHTTP(response, request)
@@ -204,7 +202,7 @@ func TestPUTCars(t *testing.T) {
 
 		assertStatus(t, response.Code, http.StatusOK)
 		assertCar(t, got, want)
-
+		assertContentType(t, response, jsonContentType)
 	})
 }
 

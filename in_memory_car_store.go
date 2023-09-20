@@ -7,12 +7,6 @@ import (
 var ErrCarCreationMessage = errors.New("unable to create a car without id")
 var ErrCarUpdatingMessage = errors.New("unable to update a car without id")
 
-// CarsInitialData stores the initial data for InMemoryCarStore
-var CarsInitialData map[string]Car = map[string]Car{
-	"JHk290Xj": {"Ford", "F10", "Base", "Silver", 2010, "Truck", 120123, 1999900, "JHk290Xj"},
-	"fWl37la":  {"Toyota", "Camry", "SE", "White", 2019, "Sedan", 3999, 2899000, "fWl37la"},
-}
-
 // InMemoryCarStore collects data about cars in memory.
 type InMemoryCarStore struct {
 	store map[string]Car
@@ -20,7 +14,7 @@ type InMemoryCarStore struct {
 
 // NewInMemoryCarStore initilizes an empty car store.
 func NewInMemoryCarStore() *InMemoryCarStore {
-	return &InMemoryCarStore{CarsInitialData}
+	return &InMemoryCarStore{map[string]Car{}}
 }
 
 // GetAll retrieves all cars from the store
@@ -50,10 +44,15 @@ func (i *InMemoryCarStore) Create(car Car) (Car, error) {
 
 // Update a car informing an id
 func (i *InMemoryCarStore) Update(id string, car Car) (Car, error) {
-	if i.Get(id).Id == "" {
+	carToUpdate := i.Get(id)
+
+	// car not exists
+	if carToUpdate.Id == "" {
 		return Car{}, ErrCarUpdatingMessage
 	}
 
-	i.store[id] = car
+	updateCarFromTo(&car, &carToUpdate)
+
+	i.store[id] = carToUpdate
 	return i.store[id], nil
 }
