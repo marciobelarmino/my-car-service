@@ -107,8 +107,15 @@ func NewCarServer(store carstore.CarStore) *CarServer {
 	c.store = store
 
 	router := http.NewServeMux()
+
+	// List cars and it allows create a new car
 	router.Handle("/cars", http.HandlerFunc(c.carHandler))
+
+	// Get car and it allows update a car
 	router.Handle("/cars/", http.HandlerFunc(c.carByIdHandler))
+
+	// Serve Swagger UI
+	router.Handle("/swagger-ui/", http.StripPrefix("/swagger-ui/", http.FileServer(http.Dir("./swagger-ui"))))
 
 	c.Handler = router
 
