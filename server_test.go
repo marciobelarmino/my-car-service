@@ -37,6 +37,27 @@ func (s *StubCarStore) Create(car Car) (Car, error) {
 	return s.store[car.Id], nil
 }
 
+func (s *StubCarStore) Update(id string, car Car) (Car, error) {
+	carToUpdate := s.Get(id)
+
+	// car not exists
+	if carToUpdate.Id == "" {
+		return Car{}, ErrCarUpdatingMessage
+	}
+
+	carToUpdate.Make = car.Make
+	carToUpdate.Model = car.Model
+	carToUpdate.Year = car.Year
+	carToUpdate.Color = car.Color
+	carToUpdate.Category = car.Category
+	carToUpdate.Package = car.Package
+	carToUpdate.Mileage = car.Mileage
+	carToUpdate.Price = car.Price
+
+	s.store[id] = carToUpdate
+	return s.store[id], nil
+}
+
 func TestGETCars(t *testing.T) {
 
 	t.Run("it returns 404 on missing cars", func(t *testing.T) {
@@ -132,6 +153,58 @@ func TestPOSTCars(t *testing.T) {
 
 		server.ServeHTTP(response, request)
 		assertStatus(t, response.Code, http.StatusBadRequest)
+	})
+
+}
+
+func TestPUTCars(t *testing.T) {
+	existingCar := map[string]Car{
+		"Xyz1234": {
+			Id:       "Xyz1234",
+			Make:     "Toyota",
+			Model:    "Camry",
+			Year:     2022,
+			Color:    "Silver",
+			Category: "Sedan",
+			Package:  "SE",
+			Mileage:  1000,
+			Price:    2999000,
+		},
+	}
+
+	store := StubCarStore{existingCar}
+	server := NewCarServer(&store)
+
+	t.Run("it updates an existent car when PUT", func(t *testing.T) {
+		keyToUpdate := "Xyz1234"
+		want := Car{
+			Id:       "Xyz1234",
+			Make:     "Toyota",
+			Model:    "Camry",
+			Year:     2020,
+			Color:    "Gold",
+			Category: "Sedan",
+			Package:  "SE",
+			Mileage:  3000,
+			Price:    2999000,
+		}
+
+		var requestBody bytes.Buffer
+		err := json.NewEncoder(&requestBody).Encode(want)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		request, _ := http.NewRequest(http.MethodPut, fmt.Sprintf("/cars/%s", keyToUpdate), &requestBody)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		got := getCarFromResponse(t, response.Body)
+
+		assertStatus(t, response.Code, http.StatusOK)
+		assertCar(t, got, want)
+
 	})
 }
 

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 )
@@ -26,6 +27,7 @@ type CarStore interface {
 	Get(id string) Car
 	GetAll() []Car
 	Create(car Car) (Car, error)
+	Update(id string, car Car) (Car, error)
 }
 
 // CarServer is a HTTP interface for car information
@@ -70,9 +72,44 @@ func (c *CarServer) createCarHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(carCreated)
 }
 
-func (c *CarServer) getCarByIdHandler(w http.ResponseWriter, r *http.Request) {
-	id := strings.TrimPrefix(r.URL.Path, "/cars/")
-	car := c.store.Get(id)
+func (c *CarServer) carByIdHandler(w http.ResponseWriter, r *http.Request) {
+	carId := strings.TrimPrefix(r.URL.Path, "/cars/")
+
+	switch r.Method {
+	case http.MethodGet:
+		c.getCarByIdHandler(w, carId)
+	case http.MethodPut:
+		c.putCarByIdHandler(w, carId, r.Body)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func (c *CarServer) putCarByIdHandler(w http.ResponseWriter, carId string, body io.Reader) {
+	existingCar := c.store.Get(carId)
+
+	if existingCar.Id == "" {
+		w.WriteHeader(http.StatusNotFound)
+	}
+
+	var carToUpdate Car
+	err := json.NewDecoder(body).Decode(&carToUpdate)
+	if err != nil {
+		http.Error(w, "Invalid JSON request body", http.StatusBadRequest)
+		return
+	}
+
+	carUpdated, err := c.store.Update(carId, carToUpdate)
+	if err != nil {
+		http.Error(w, "Error update a car", http.StatusInternalServerError)
+	}
+
+	w.Header().Set("content-type", jsonContentType)
+	json.NewEncoder(w).Encode(carUpdated)
+}
+
+func (c *CarServer) getCarByIdHandler(w http.ResponseWriter, carId string) {
+	car := c.store.Get(carId)
 
 	if car.Id == "" {
 		w.WriteHeader(http.StatusNotFound)
@@ -90,7 +127,7 @@ func NewCarServer(store CarStore) *CarServer {
 
 	router := http.NewServeMux()
 	router.Handle("/cars", http.HandlerFunc(c.carHandler))
-	router.Handle("/cars/", http.HandlerFunc(c.getCarByIdHandler))
+	router.Handle("/cars/", http.HandlerFunc(c.carByIdHandler))
 
 	c.Handler = router
 

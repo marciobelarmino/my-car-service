@@ -5,6 +5,7 @@ import (
 )
 
 var ErrCarCreationMessage = errors.New("unable to create a car without id")
+var ErrCarUpdatingMessage = errors.New("unable to update a car without id")
 
 // CarsInitialData stores the initial data for InMemoryCarStore
 var CarsInitialData map[string]Car = map[string]Car{
@@ -45,4 +46,14 @@ func (i *InMemoryCarStore) Create(car Car) (Car, error) {
 
 	i.store[car.Id] = car
 	return i.store[car.Id], nil
+}
+
+// Update a car informing an id
+func (i *InMemoryCarStore) Update(id string, car Car) (Car, error) {
+	if i.Get(id).Id == "" {
+		return Car{}, ErrCarUpdatingMessage
+	}
+
+	i.store[id] = car
+	return i.store[id], nil
 }
