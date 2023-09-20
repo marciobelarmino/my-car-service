@@ -24,3 +24,8 @@ func (i *InMemoryCarStore) GetAll() []Car {
 	}
 	return cars
 }
+
+// Get retrieve car from the store by id
+func (i *InMemoryCarStore) Get(id string) Car {
+	return i.store[id]
+}

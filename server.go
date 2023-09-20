@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 )
 
 // Car stores car information
@@ -22,6 +23,7 @@ const jsonContentType = "application/json"
 
 // CarStore stores data of cars
 type CarStore interface {
+	Get(id string) Car
 	GetAll() []Car
 }
 
@@ -31,9 +33,21 @@ type CarServer struct {
 	http.Handler
 }
 
-func (c *CarServer) carsHandler(w http.ResponseWriter, r *http.Request) {
+func (c *CarServer) listOfCarsHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", jsonContentType)
 	json.NewEncoder(w).Encode(c.store.GetAll())
+}
+
+func (c *CarServer) getCarByIdHandler(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimPrefix(r.URL.Path, "/cars/")
+	car := c.store.Get(id)
+
+	if car.Id == "" {
+		w.WriteHeader(http.StatusNotFound)
+	}
+
+	w.Header().Set("content-type", jsonContentType)
+	json.NewEncoder(w).Encode(car)
 }
 
 // NewCarServer creates a CarServer with routing configured.
@@ -43,7 +57,8 @@ func NewCarServer(store CarStore) *CarServer {
 	c.store = store
 
 	router := http.NewServeMux()
-	router.Handle("/cars", http.HandlerFunc(c.carsHandler))
+	router.Handle("/cars", http.HandlerFunc(c.listOfCarsHandler))
+	router.Handle("/cars/", http.HandlerFunc(c.getCarByIdHandler))
 
 	c.Handler = router
 
