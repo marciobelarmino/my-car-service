@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -26,7 +28,16 @@ func (s *StubCarStore) Get(id string) Car {
 	return s.store[id]
 }
 
-func TestCar(t *testing.T) {
+func (s *StubCarStore) Create(car Car) (Car, error) {
+	if car.Id == "" {
+		return Car{}, ErrCarCreationMessage
+	}
+
+	s.store[car.Id] = car
+	return s.store[car.Id], nil
+}
+
+func TestGETCars(t *testing.T) {
 
 	t.Run("it returns 404 on missing cars", func(t *testing.T) {
 		store := StubCarStore{CarsInitialData}
@@ -56,6 +67,7 @@ func TestCar(t *testing.T) {
 
 		assertStatus(t, response.Code, http.StatusOK)
 		assertCar(t, got, want)
+		assertContentType(t, response, jsonContentType)
 	})
 
 	t.Run("it retrieve the list of cars", func(t *testing.T) {
@@ -77,6 +89,49 @@ func TestCar(t *testing.T) {
 		assertStatus(t, response.Code, http.StatusOK)
 		assertCars(t, got, want)
 		assertContentType(t, response, jsonContentType)
+	})
+}
+
+func TestPOSTCars(t *testing.T) {
+
+	store := StubCarStore{map[string]Car{}}
+	server := NewCarServer(&store)
+
+	t.Run("it creates a new car when POST", func(t *testing.T) {
+
+		want := Car{
+			Id:    "Xyz123",
+			Make:  "Toyota",
+			Model: "Camry",
+			Year:  2022,
+		}
+
+		var requestBody bytes.Buffer
+		err := json.NewEncoder(&requestBody).Encode(want)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		request, _ := http.NewRequest(http.MethodPost, "/cars", &requestBody)
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+
+		got := getCarFromResponse(t, response.Body)
+
+		assertStatus(t, response.Code, http.StatusCreated)
+		assertCar(t, got, want)
+		assertContentType(t, response, jsonContentType)
+	})
+
+	t.Run("it returns a bad request when request data is malformed", func(t *testing.T) {
+		malformedJSON := `{malformed...string}`
+
+		request, _ := http.NewRequest(http.MethodPost, "/cars", strings.NewReader(malformedJSON))
+		response := httptest.NewRecorder()
+
+		server.ServeHTTP(response, request)
+		assertStatus(t, response.Code, http.StatusBadRequest)
 	})
 }
 
